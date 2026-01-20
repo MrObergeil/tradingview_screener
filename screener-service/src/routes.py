@@ -68,6 +68,88 @@ class TickerSearchResponse(BaseModel):
     count: int
 
 
+class FieldInfo(BaseModel):
+    """Field metadata."""
+
+    name: str
+    displayName: str
+    type: str  # "number", "string", "percent"
+    category: str
+
+
+class FieldsResponse(BaseModel):
+    """Fields list response."""
+
+    fields: list[FieldInfo]
+    categories: list[str]
+
+
+# Available fields with metadata
+AVAILABLE_FIELDS: list[dict] = [
+    # Basic Info
+    {"name": "name", "displayName": "Ticker", "type": "string", "category": "Basic"},
+    {"name": "description", "displayName": "Name", "type": "string", "category": "Basic"},
+    {"name": "sector", "displayName": "Sector", "type": "string", "category": "Basic"},
+    {"name": "industry", "displayName": "Industry", "type": "string", "category": "Basic"},
+    {"name": "exchange", "displayName": "Exchange", "type": "string", "category": "Basic"},
+    {"name": "type", "displayName": "Type", "type": "string", "category": "Basic"},
+
+    # Price
+    {"name": "close", "displayName": "Price", "type": "number", "category": "Price"},
+    {"name": "open", "displayName": "Open", "type": "number", "category": "Price"},
+    {"name": "high", "displayName": "High", "type": "number", "category": "Price"},
+    {"name": "low", "displayName": "Low", "type": "number", "category": "Price"},
+    {"name": "change", "displayName": "Change %", "type": "percent", "category": "Price"},
+    {"name": "change_abs", "displayName": "Change", "type": "number", "category": "Price"},
+
+    # Volume
+    {"name": "volume", "displayName": "Volume", "type": "number", "category": "Volume"},
+    {"name": "relative_volume_10d_calc", "displayName": "Rel Volume", "type": "number", "category": "Volume"},
+    {"name": "average_volume_10d_calc", "displayName": "Avg Volume (10d)", "type": "number", "category": "Volume"},
+
+    # Fundamental
+    {"name": "market_cap_basic", "displayName": "Market Cap", "type": "number", "category": "Fundamental"},
+    {"name": "price_earnings_ttm", "displayName": "P/E Ratio", "type": "number", "category": "Fundamental"},
+    {"name": "earnings_per_share_basic_ttm", "displayName": "EPS", "type": "number", "category": "Fundamental"},
+    {"name": "dividend_yield_recent", "displayName": "Dividend Yield", "type": "percent", "category": "Fundamental"},
+    {"name": "beta_1_year", "displayName": "Beta", "type": "number", "category": "Fundamental"},
+
+    # Technical - Oscillators
+    {"name": "RSI", "displayName": "RSI (14)", "type": "number", "category": "Technical"},
+    {"name": "RSI7", "displayName": "RSI (7)", "type": "number", "category": "Technical"},
+    {"name": "MACD.macd", "displayName": "MACD", "type": "number", "category": "Technical"},
+    {"name": "Stoch.K", "displayName": "Stochastic %K", "type": "number", "category": "Technical"},
+    {"name": "ATR", "displayName": "ATR", "type": "number", "category": "Technical"},
+    {"name": "Volatility.D", "displayName": "Volatility", "type": "percent", "category": "Technical"},
+
+    # Technical - Moving Averages
+    {"name": "SMA20", "displayName": "SMA 20", "type": "number", "category": "Moving Averages"},
+    {"name": "SMA50", "displayName": "SMA 50", "type": "number", "category": "Moving Averages"},
+    {"name": "SMA200", "displayName": "SMA 200", "type": "number", "category": "Moving Averages"},
+    {"name": "EMA20", "displayName": "EMA 20", "type": "number", "category": "Moving Averages"},
+    {"name": "EMA50", "displayName": "EMA 50", "type": "number", "category": "Moving Averages"},
+
+    # Performance
+    {"name": "Perf.W", "displayName": "Perf Week", "type": "percent", "category": "Performance"},
+    {"name": "Perf.1M", "displayName": "Perf Month", "type": "percent", "category": "Performance"},
+    {"name": "Perf.3M", "displayName": "Perf 3M", "type": "percent", "category": "Performance"},
+    {"name": "Perf.6M", "displayName": "Perf 6M", "type": "percent", "category": "Performance"},
+    {"name": "Perf.Y", "displayName": "Perf Year", "type": "percent", "category": "Performance"},
+]
+
+FIELD_CATEGORIES = ["Basic", "Price", "Volume", "Fundamental", "Technical", "Moving Averages", "Performance"]
+
+
+@router.get("/fields", response_model=FieldsResponse)
+async def get_fields() -> FieldsResponse:
+    """
+    Get list of available fields with metadata.
+    Used for column selection in the UI.
+    """
+    fields = [FieldInfo(**f) for f in AVAILABLE_FIELDS]
+    return FieldsResponse(fields=fields, categories=FIELD_CATEGORIES)
+
+
 @router.get("/tickers/search", response_model=TickerSearchResponse)
 async def search_tickers(
     q: str = Query(..., min_length=1, description="Search query"),

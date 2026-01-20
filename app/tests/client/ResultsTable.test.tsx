@@ -55,7 +55,7 @@ describe("ResultsTable", () => {
       expect(screen.getByText("Change %")).toBeDefined();
       expect(screen.getByText("Change")).toBeDefined();
       expect(screen.getByText("Volume")).toBeDefined();
-      expect(screen.getByText("Market Cap")).toBeDefined();
+      expect(screen.getByText("Mkt Cap")).toBeDefined();
     });
 
     it("should render all result rows", () => {

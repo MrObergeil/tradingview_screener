@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import TickerInput from "./components/TickerInput";
 import BasicFilters from "./components/BasicFilters";
+import ColumnSelector, { DEFAULT_COLUMNS } from "./components/ColumnSelector";
 import { ResultsTable, type StockResult } from "./components/ResultsTable";
 import { useScreener } from "./hooks/useScreener";
 import type { Filter } from "./lib/client";
@@ -14,8 +15,14 @@ export default function App() {
   // Track which tickers are actually invalid (don't exist at all)
   const [invalidTickers, setInvalidTickers] = useState<string[]>([]);
 
+  // Track selected columns
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(DEFAULT_COLUMNS);
+
   // Ref to track valid tickers (ones that exist) - persists across filter changes
   const validTickersRef = useRef<Set<string>>(new Set());
+
+  // Ref to track columns for re-scans
+  const columnsRef = useRef<string[]>(DEFAULT_COLUMNS);
 
   // Handle ticker scan - validates which tickers exist (without filters)
   const handleScan = useCallback(
@@ -26,7 +33,7 @@ export default function App() {
 
       // Clear filters for initial validation scan
       setFilters([]);
-      const response = await executeScan(tickers);
+      const response = await executeScan(tickers, columnsRef.current);
 
       // After scan, determine which tickers are valid
       if (response?.results) {
@@ -51,10 +58,22 @@ export default function App() {
     (filters: Filter[]) => {
       setFilters(filters);
       if (lastTickers.length > 0) {
-        void executeScan(lastTickers);
+        void executeScan(lastTickers, columnsRef.current);
       }
     },
     [setFilters, executeScan, lastTickers]
+  );
+
+  // Handle column changes - update ref and re-scan if we have tickers
+  const handleColumnsChange = useCallback(
+    (columns: string[]) => {
+      setSelectedColumns(columns);
+      columnsRef.current = columns;
+      if (lastTickers.length > 0) {
+        void executeScan(lastTickers, columns);
+      }
+    },
+    [executeScan, lastTickers]
   );
 
   // Cast results to StockResult[] for type safety
@@ -76,6 +95,15 @@ export default function App() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Filters</h2>
           <BasicFilters onApply={handleFiltersApply} isLoading={isLoading} />
+        </div>
+
+        {/* Column Selection */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Columns</h2>
+          <ColumnSelector
+            selectedColumns={selectedColumns}
+            onColumnsChange={handleColumnsChange}
+          />
         </div>
 
         {/* Error Display */}
@@ -113,7 +141,11 @@ export default function App() {
               </span>
             ) : null}
           </div>
-          <ResultsTable results={results} isLoading={isLoading} />
+          <ResultsTable
+            results={results}
+            isLoading={isLoading}
+            columns={selectedColumns}
+          />
         </div>
       </main>
     </div>

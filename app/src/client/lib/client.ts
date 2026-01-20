@@ -65,6 +65,20 @@ export interface TickerSearchResponse {
   count: number;
 }
 
+/** Field metadata */
+export interface FieldInfo {
+  name: string;
+  displayName: string;
+  type: "number" | "string" | "percent";
+  category: string;
+}
+
+/** Fields list response */
+export interface FieldsResponse {
+  fields: FieldInfo[];
+  categories: string[];
+}
+
 /** Check if response is an error */
 function isApiError(data: unknown): data is ApiError {
   return typeof data === "object" && data !== null && "error" in data;
@@ -115,6 +129,19 @@ export async function searchTickers(
 
   if (!response.ok) {
     throw new Error(`Ticker search failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get available fields with metadata.
+ */
+export async function getFields(): Promise<FieldsResponse> {
+  const response = await fetch("/api/fields");
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch fields: ${response.statusText}`);
   }
 
   return response.json();

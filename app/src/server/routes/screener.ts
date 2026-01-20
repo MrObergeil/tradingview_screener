@@ -43,6 +43,18 @@ export async function screenerRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /**
+   * GET /api/fields - Get available fields with metadata
+   */
+  app.get("/api/fields", async (_request, reply: FastifyReply) => {
+    try {
+      const result = await screenerClient.getFields();
+      return result;
+    } catch (error) {
+      return handleScreenerError(error, reply);
+    }
+  });
+
+  /**
    * GET /api/tickers/search - Search for tickers by name/description
    */
   app.get(

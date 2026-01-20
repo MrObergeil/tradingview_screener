@@ -14,6 +14,7 @@ export interface StockResult {
 interface ResultsTableProps {
   results: StockResult[];
   isLoading?: boolean;
+  columns?: string[];
 }
 
 /** Sort direction */
@@ -35,67 +36,95 @@ interface Column {
   sortable?: boolean;
 }
 
-/** Default columns to display */
-const DEFAULT_COLUMNS: Column[] = [
-  {
-    key: "name",
-    label: "Ticker",
-    align: "left",
-    format: (v) => String(v ?? "-"),
-    sortable: true,
-  },
-  {
-    key: "close",
-    label: "Price",
-    align: "right",
-    format: formatPrice,
-    sortable: true,
-  },
-  {
-    key: "change",
-    label: "Change %",
-    align: "right",
-    format: formatPercent,
-    colorFn: getChangeColor,
-    sortable: true,
-  },
-  {
-    key: "change_abs",
-    label: "Change",
-    align: "right",
-    format: formatPriceChange,
-    colorFn: getChangeColor,
-    sortable: true,
-  },
-  {
-    key: "volume",
-    label: "Volume",
-    align: "right",
-    format: formatVolume,
-    sortable: true,
-  },
-  {
-    key: "market_cap_basic",
-    label: "Market Cap",
-    align: "right",
-    format: formatMarketCap,
-    sortable: true,
-  },
-];
+/** Column configuration map - defines how each column is displayed */
+const COLUMN_CONFIG: Record<string, Omit<Column, "key">> = {
+  // Basic info
+  name: { label: "Ticker", align: "left", format: (v) => String(v ?? "-"), sortable: true },
+  description: { label: "Name", align: "left", format: (v) => String(v ?? "-"), sortable: true },
+  sector: { label: "Sector", align: "left", format: (v) => String(v ?? "-"), sortable: true },
+  industry: { label: "Industry", align: "left", format: (v) => String(v ?? "-"), sortable: true },
+  exchange: { label: "Exchange", align: "left", format: (v) => String(v ?? "-"), sortable: true },
+  type: { label: "Type", align: "left", format: (v) => String(v ?? "-"), sortable: true },
+
+  // Price
+  close: { label: "Price", align: "right", format: formatPrice, sortable: true },
+  open: { label: "Open", align: "right", format: formatPrice, sortable: true },
+  high: { label: "High", align: "right", format: formatPrice, sortable: true },
+  low: { label: "Low", align: "right", format: formatPrice, sortable: true },
+  change: { label: "Change %", align: "right", format: formatPercent, colorFn: getChangeColor, sortable: true },
+  change_abs: { label: "Change", align: "right", format: formatPriceChange, colorFn: getChangeColor, sortable: true },
+
+  // Volume
+  volume: { label: "Volume", align: "right", format: formatVolume, sortable: true },
+  relative_volume_10d_calc: { label: "Rel Vol", align: "right", format: formatNumber, sortable: true },
+  average_volume_10d_calc: { label: "Avg Vol", align: "right", format: formatVolume, sortable: true },
+
+  // Fundamental
+  market_cap_basic: { label: "Mkt Cap", align: "right", format: formatMarketCap, sortable: true },
+  price_earnings_ttm: { label: "P/E", align: "right", format: formatNumber, sortable: true },
+  earnings_per_share_basic_ttm: { label: "EPS", align: "right", format: formatPrice, sortable: true },
+  dividend_yield_recent: { label: "Div Yield", align: "right", format: formatPercent, sortable: true },
+  beta_1_year: { label: "Beta", align: "right", format: formatNumber, sortable: true },
+
+  // Technical
+  RSI: { label: "RSI", align: "right", format: formatNumber, sortable: true },
+  RSI7: { label: "RSI7", align: "right", format: formatNumber, sortable: true },
+  "MACD.macd": { label: "MACD", align: "right", format: formatNumber, sortable: true },
+  "Stoch.K": { label: "Stoch", align: "right", format: formatNumber, sortable: true },
+  ATR: { label: "ATR", align: "right", format: formatNumber, sortable: true },
+  "Volatility.D": { label: "Vol", align: "right", format: formatPercent, sortable: true },
+
+  // Moving Averages
+  SMA20: { label: "SMA20", align: "right", format: formatPrice, sortable: true },
+  SMA50: { label: "SMA50", align: "right", format: formatPrice, sortable: true },
+  SMA200: { label: "SMA200", align: "right", format: formatPrice, sortable: true },
+  EMA20: { label: "EMA20", align: "right", format: formatPrice, sortable: true },
+  EMA50: { label: "EMA50", align: "right", format: formatPrice, sortable: true },
+
+  // Performance
+  "Perf.W": { label: "1W", align: "right", format: formatPercent, colorFn: getChangeColor, sortable: true },
+  "Perf.1M": { label: "1M", align: "right", format: formatPercent, colorFn: getChangeColor, sortable: true },
+  "Perf.3M": { label: "3M", align: "right", format: formatPercent, colorFn: getChangeColor, sortable: true },
+  "Perf.6M": { label: "6M", align: "right", format: formatPercent, colorFn: getChangeColor, sortable: true },
+  "Perf.Y": { label: "1Y", align: "right", format: formatPercent, colorFn: getChangeColor, sortable: true },
+};
+
+/** Default fallback for unknown columns */
+const DEFAULT_COLUMN_CONFIG: Omit<Column, "key"> = {
+  label: "",
+  align: "right",
+  format: (v) => String(v ?? "-"),
+  sortable: true,
+};
+
+/** Build column definitions from column names */
+function buildColumns(columnNames: string[]): Column[] {
+  return columnNames.map((key) => {
+    const config = COLUMN_CONFIG[key] ?? { ...DEFAULT_COLUMN_CONFIG, label: key };
+    return { key, ...config };
+  });
+}
+
+/** Default column keys */
+const DEFAULT_COLUMN_KEYS = ["name", "close", "change", "change_abs", "volume", "market_cap_basic"];
 
 /**
  * Results table component for displaying stock scan results.
  * Memoized to prevent unnecessary re-renders.
  */
-function ResultsTableComponent({ results, isLoading = false }: ResultsTableProps) {
+function ResultsTableComponent({
+  results,
+  isLoading = false,
+  columns: columnNames = DEFAULT_COLUMN_KEYS,
+}: ResultsTableProps) {
   // Sort state
   const [sortState, setSortState] = useState<SortState>({
     column: null,
     direction: "desc",
   });
 
-  // Memoize column definitions (static)
-  const columns = useMemo(() => DEFAULT_COLUMNS, []);
+  // Build column definitions from column names
+  const columns = useMemo(() => buildColumns(columnNames), [columnNames]);
 
   // Handle column header click for sorting
   const handleSort = useCallback((columnKey: string) => {
@@ -240,6 +269,14 @@ function SortIndicator({ direction }: { direction: SortDirection }) {
 }
 
 // ============ Formatting Utilities ============
+
+function formatNumber(value: unknown): string {
+  if (value == null || typeof value !== "number") return "-";
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 function formatPrice(value: unknown): string {
   if (value == null || typeof value !== "number") return "-";

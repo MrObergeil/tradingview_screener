@@ -516,3 +516,17 @@ interface UseScreenerReturn {
 
 **Data available:** Sector data already in `screener-service/data/tickers.json`
 
+
+### Hybrid Filtering Approach (Future Enhancement)
+**Priority:** Medium
+**Reason:** Better UX for specific ticker scans
+
+**Implementation:**
+- For small ticker sets (<50): Fetch all data once, then filter client-side (instant filtering)
+- For market-wide scans (>50): Use server-side filtering (handles large datasets)
+- Could auto-detect based on ticker count or add a toggle
+
+**Benefits:**
+- Instant filter/column changes for small scans
+- Still handles large market scans efficiently
+

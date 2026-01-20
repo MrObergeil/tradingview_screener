@@ -9,6 +9,7 @@ import type {
   ScanResponse,
   HealthResponse,
   TickerSearchResponse,
+  FieldsResponse,
 } from "../types/screener.js";
 
 /** Error thrown when screener service call fails */
@@ -74,6 +75,18 @@ export class ScreenerClient {
       return response;
     } catch (error) {
       throw this.handleError(error, "searchTickers");
+    }
+  }
+
+  /**
+   * Get available fields with metadata.
+   */
+  async getFields(): Promise<FieldsResponse> {
+    try {
+      const response = await ofetch<FieldsResponse>(`${this.baseUrl}/fields`);
+      return response;
+    } catch (error) {
+      throw this.handleError(error, "getFields");
     }
   }
 

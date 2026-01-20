@@ -74,3 +74,17 @@ export interface TickerSearchResponse {
   results: TickerResult[];
   count: number;
 }
+
+/** Field metadata */
+export interface FieldInfo {
+  name: string;
+  displayName: string;
+  type: "number" | "string" | "percent";
+  category: string;
+}
+
+/** Response body from /fields endpoint */
+export interface FieldsResponse {
+  fields: FieldInfo[];
+  categories: string[];
+}
