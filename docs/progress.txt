@@ -392,3 +392,110 @@ interface UseScreenerReturn {
 - Client tests: 12 (App: 3, TickerInput: 9)
 
 ---
+
+### Sprint 4: Results Table Display
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 4.1: Create Results Table Component
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created ResultsTable component with sortable columns
+- Added number formatting (price, volume, market cap)
+- Color coding for positive/negative changes
+- Empty state handling when no results
+
+**Files Created:**
+- `app/src/client/components/ResultsTable.tsx` - Results table component
+- `app/tests/client/ResultsTable.test.tsx` - Component tests (18 tests)
+
+**Key Learnings:**
+- [!] Use `toSorted()` (ES2023) instead of `sort()` for immutable sorting in React
+- [!] Must add `"lib": ["ES2023", "DOM", "DOM.Iterable"]` to tsconfig.json for toSorted()
+- Use `useMemo()` for expensive computations like sorting
+- Use `memo()` sparingly - only when props change frequently but render is expensive
+
+**Number Formatting:**
+```typescript
+// Volume: 52000000 → "52.00M"
+// Market Cap: 2850000000000 → "$2.85T"
+// Change: 2.34 → "+2.34%"
+```
+
+---
+
+### Task 4.2: Add Column Sorting
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Added sortable headers with click handlers
+- Implemented ascending/descending toggle
+- Sort indicators (⇅, ↑, ↓) show current sort state
+- Null values sort to bottom
+
+**Key Learnings:**
+- Store sort state as `{column: string | null, direction: 'asc' | 'desc'}`
+- Click cycles: none → desc → asc → desc → ...
+- Null handling: treat nulls as smaller than any value
+
+---
+
+### Task 4.3: Add Basic Filters UI
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created BasicFilters component with price/volume inputs
+- Added filter-to-API conversion (buildFilters function)
+- Clear filters functionality
+- Loading state disables inputs
+- Integrated with useScreener hook via setFilters
+
+**Files Created:**
+- `app/src/client/components/BasicFilters.tsx` - Filter inputs component
+- `app/tests/client/BasicFilters.test.tsx` - Component tests (12 tests)
+
+**Files Modified:**
+- `app/src/client/hooks/useScreener.ts` - Added setFilters, filtersRef
+- `app/src/client/App.tsx` - Integrated BasicFilters component
+
+**Key Learnings:**
+- Use `useRef` for values that need to be accessed in callbacks without re-creating them
+- `filtersRef.current` allows executeScan to access current filters without re-render
+- Clear button only shows when filters have values (conditional render)
+
+**Filter Objects:**
+```typescript
+// priceMin: "50" → { field: "close", op: "gte", value: 50 }
+// priceMax: "100" → { field: "close", op: "lte", value: 100 }
+// volumeMin: "1000000" → { field: "volume", op: "gte", value: 1000000 }
+```
+
+**Tests (42 client tests total):**
+- App.test.tsx: 3 tests
+- TickerInput.test.tsx: 9 tests
+- ResultsTable.test.tsx: 18 tests
+- BasicFilters.test.tsx: 12 tests
+
+---
+
+### Skills Added (Pre-Sprint 4)
+**Date:** January 2025
+
+**Skills Installed:**
+- `skills/agent-browser/` - Browser automation for visual testing
+- `skills/frontend-design/` - Distinctive UI patterns
+- `skills/frontend-responsive-ui/` - Mobile-first responsive design
+- `skills/react-best-practices/` - React 19/Next.js 15 performance rules (45 rules)
+- `skills/read-github-docs/` - GitHub docs via gitmcp.io
+
+**Skills Applied in Sprint 4:**
+- **react-best-practices**: Used `toSorted()` for immutable sorting, `useMemo()` for expensive computations
+- **frontend-responsive-ui**: Grid layout with responsive breakpoints (sm:grid-cols-2, lg:grid-cols-4)
+
+---

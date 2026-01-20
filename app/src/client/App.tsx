@@ -1,13 +1,38 @@
+import { useCallback, useState } from "react";
 import TickerInput from "./components/TickerInput";
+import BasicFilters from "./components/BasicFilters";
+import { ResultsTable, type StockResult } from "./components/ResultsTable";
 import { useScreener } from "./hooks/useScreener";
+import type { Filter } from "./api/client";
 
 export default function App() {
-  const { data, isLoading, error, executeScan, clearError } = useScreener();
+  const { data, isLoading, error, executeScan, setFilters, clearError } = useScreener();
 
-  const handleScan = (tickers: string[]) => {
-    console.log("Scanning tickers:", tickers);
-    void executeScan(tickers);
-  };
+  // Track last scanned tickers for re-scanning with new filters
+  const [lastTickers, setLastTickers] = useState<string[]>([]);
+
+  // Handle ticker scan
+  const handleScan = useCallback(
+    (tickers: string[]) => {
+      setLastTickers(tickers);
+      void executeScan(tickers);
+    },
+    [executeScan]
+  );
+
+  // Handle filter changes - update filters and re-scan if we have tickers
+  const handleFiltersApply = useCallback(
+    (filters: Filter[]) => {
+      setFilters(filters);
+      if (lastTickers.length > 0) {
+        void executeScan(lastTickers);
+      }
+    },
+    [setFilters, executeScan, lastTickers]
+  );
+
+  // Cast results to StockResult[] for type safety
+  const results: StockResult[] = data?.results ?? [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -21,8 +46,14 @@ export default function App() {
           <TickerInput onScan={handleScan} isLoading={isLoading} />
         </div>
 
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Filters</h2>
+          <BasicFilters onApply={handleFiltersApply} isLoading={isLoading} />
+        </div>
+
         {/* Error Display */}
-        {error && (
+        {error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
             <p className="text-red-700">{error}</p>
             <button
@@ -32,91 +63,23 @@ export default function App() {
               Dismiss
             </button>
           </div>
-        )}
+        ) : null}
 
         {/* Results Display */}
-        {data && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">
-                Results ({data.totalCount} total)
-              </h2>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+            <h2 className="text-lg font-semibold">
+              {data ? `Results (${data.totalCount} total)` : "Results"}
+            </h2>
+            {data ? (
               <span className="text-sm text-gray-500">
-                {data.durationMs}ms
+                Loaded in {data.durationMs}ms
               </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      Ticker
-                    </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                      Price
-                    </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                      Change %
-                    </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                      Volume
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {data.results.map((result, index) => (
-                    <tr key={index}>
-                      <td className="px-4 py-2 whitespace-nowrap font-medium">
-                        {String(result["name"] ?? "")}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right">
-                        {formatNumber(result["close"] as number | null)}
-                      </td>
-                      <td
-                        className={`px-4 py-2 whitespace-nowrap text-right ${getChangeColor(result["change"] as number | null)}`}
-                      >
-                        {formatPercent(result["change"] as number | null)}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right">
-                        {formatVolume(result["volume"] as number | null)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            ) : null}
           </div>
-        )}
+          <ResultsTable results={results} isLoading={isLoading} />
+        </div>
       </main>
     </div>
   );
-}
-
-function formatNumber(value: number | null | undefined): string {
-  if (value == null) return "-";
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatPercent(value: number | null | undefined): string {
-  if (value == null) return "-";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
-
-function formatVolume(value: number | null | undefined): string {
-  if (value == null) return "-";
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K`;
-  return value.toLocaleString();
-}
-
-function getChangeColor(value: number | null | undefined): string {
-  if (value == null) return "text-gray-500";
-  if (value > 0) return "text-green-600";
-  if (value < 0) return "text-red-600";
-  return "text-gray-500";
 }

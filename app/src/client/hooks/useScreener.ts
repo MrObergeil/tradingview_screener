@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { scan, type ScanRequest, type ScanResponse } from "../api/client";
+import { useState, useCallback, useRef } from "react";
+import { scan, type ScanRequest, type ScanResponse, type Filter } from "../api/client";
 
 interface UseScreenerState {
   data: ScanResponse | null;
@@ -8,7 +8,8 @@ interface UseScreenerState {
 }
 
 interface UseScreenerReturn extends UseScreenerState {
-  executeScan: (tickers: string[], columns?: string[]) => Promise<void>;
+  executeScan: (tickers: string[], columns?: string[], additionalFilters?: Filter[]) => Promise<void>;
+  setFilters: (filters: Filter[]) => void;
   clearError: () => void;
   clearData: () => void;
 }
@@ -33,22 +34,37 @@ export function useScreener(): UseScreenerReturn {
     error: null,
   });
 
+  // Store filters in a ref to avoid re-creating executeScan
+  const filtersRef = useRef<Filter[]>([]);
+
+  const setFilters = useCallback((filters: Filter[]) => {
+    filtersRef.current = filters;
+  }, []);
+
   const executeScan = useCallback(
-    async (tickers: string[], columns: string[] = DEFAULT_COLUMNS) => {
+    async (
+      tickers: string[],
+      columns: string[] = DEFAULT_COLUMNS,
+      additionalFilters: Filter[] = []
+    ) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        // Build request with ticker filter
+        // Combine ticker filter with stored filters and additional filters
+        const allFilters: Filter[] = [
+          {
+            field: "name",
+            op: "in",
+            value: tickers.map((t) => `NASDAQ:${t}`),
+          },
+          ...filtersRef.current,
+          ...additionalFilters,
+        ];
+
         const request: ScanRequest = {
           columns,
-          filters: [
-            {
-              field: "name",
-              op: "in",
-              value: tickers.map((t) => `NASDAQ:${t}`),
-            },
-          ],
-          limit: tickers.length,
+          filters: allFilters,
+          limit: Math.max(tickers.length, 50), // Allow more results with filters
         };
 
         const response = await scan(request);
@@ -73,6 +89,7 @@ export function useScreener(): UseScreenerReturn {
   return {
     ...state,
     executeScan,
+    setFilters,
     clearError,
     clearData,
   };
