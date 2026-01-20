@@ -1,3 +1,7 @@
+# Devenv
+.devenv/
+.devenv.flake.nix
+
 # Python
 __pycache__/
 *.py[cod]

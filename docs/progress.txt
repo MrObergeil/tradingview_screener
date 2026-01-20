@@ -67,3 +67,48 @@ Last Updated: January 2025
 - React frontend: `app/src/client/`
 
 ---
+
+### Task 1.2: Implement Python Health Endpoint
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Set up devenv at project root (Python 3.11 + Node 20)
+- Created FastAPI application with health endpoint
+- Added pytest tests for health endpoint
+
+**Files Created:**
+- `devenv.nix` - Nix-based dev environment (Python + Node)
+- `devenv.yaml` - devenv configuration
+- `.envrc` - direnv auto-activation
+- `screener-service/src/config.py` - Settings with pydantic-settings
+- `screener-service/src/main.py` - FastAPI app entry point
+- `screener-service/src/routes.py` - /health endpoint
+- `screener-service/tests/test_health.py` - Endpoint tests
+- `screener-service/pytest.ini` - Pytest configuration
+
+**Key Learnings:**
+- devenv.nix at project root provides unified dev environment for Python + Node
+- Use `pydantic-settings` for type-safe configuration from env vars
+- FastAPI test client uses `httpx.AsyncClient` with `ASGITransport`
+- [!] Remember to add `sys.path` manipulation in tests to import from `src/`
+
+**How to Run:**
+```bash
+# Enter devenv shell (auto-activates with direnv)
+devenv shell
+
+# Or manually:
+cd screener-service
+pip install -r requirements.txt
+python src/main.py
+
+# Run tests:
+cd screener-service
+pytest
+```
+
+**Endpoints:**
+- `GET /health` - Returns `{"status": "ok", "timestamp": "..."}`
+
+---

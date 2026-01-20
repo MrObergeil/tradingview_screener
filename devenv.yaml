@@ -1,0 +1,6 @@
+# devenv.yaml - Development environment configuration
+# See https://devenv.sh for documentation
+
+inputs:
+  nixpkgs:
+    url: github:NixOS/nixpkgs/nixpkgs-unstable
