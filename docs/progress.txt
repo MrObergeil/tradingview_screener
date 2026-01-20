@@ -112,3 +112,57 @@ pytest
 - `GET /health` - Returns `{"status": "ok", "timestamp": "..."}`
 
 ---
+
+### Task 1.3: Implement /scan Endpoint with tradingview-screener
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created Pydantic models for scan request/response schemas
+- Implemented ScreenerService wrapper for tradingview-screener library
+- Added /scan endpoint with filter, ordering, pagination support
+- Created comprehensive tests with real TradingView API calls
+
+**Files Created/Modified:**
+- `screener-service/src/models.py` - Request/response Pydantic models
+- `screener-service/src/screener.py` - tradingview-screener wrapper
+- `screener-service/src/routes.py` - Added /scan endpoint
+- `screener-service/tests/test_scan.py` - Scan endpoint tests (8 tests)
+- `screener-service/requirements.txt` - Added tradingview-screener dependency
+
+**Key Learnings:**
+- [!] tradingview-screener Column class uses Python comparison operators, NOT methods:
+  - CORRECT: `col > value`, `col >= value`, `col == value`
+  - WRONG: `col.above(value)`, `col.below(value)`, `col.equal(value)`
+
+- [!] Multiple filters MUST use `where2(And(...))`, NOT chained `.where()` calls:
+  - CORRECT: `query.where2(And(condition1, condition2, condition3))`
+  - WRONG: `query.where(cond1).where(cond2).where(cond3)` (only applies last filter!)
+
+- Single filter can use `query.where(condition)` directly
+
+- Column methods available: `.between(low, high)`, `.not_between()`, `.isin([])`, `.not_in([])`
+
+- Response fields use aliases for camelCase JSON (e.g., `total_count` → `totalCount`)
+
+**Filter Operators Supported:**
+- Comparison: `gt`, `gte`, `lt`, `lte`, `eq`, `neq`
+- Range: `between`, `not_between` (require list of 2 values)
+- Set: `in`, `not_in` (require list of values)
+
+**Endpoints:**
+- `POST /scan` - Execute screener scan
+  - Request: `{columns: [...], filters?: [...], orderBy?: {...}, limit?: 50, offset?: 0}`
+  - Response: `{totalCount, results, timestamp, durationMs}`
+
+**Tests (8 total, all passing):**
+1. `test_scan_basic_columns` - Basic column selection
+2. `test_scan_with_filter_gt` - Greater-than filter
+3. `test_scan_with_filter_between` - Between filter
+4. `test_scan_with_ordering` - Order by field
+5. `test_scan_with_multiple_filters` - Multiple filters combined
+6. `test_scan_empty_columns_rejected` - Validation error on empty columns
+7. `test_scan_invalid_between_value` - Validation error on bad between value
+8. `test_scan_response_timing` - Response includes timing metadata
+
+---
