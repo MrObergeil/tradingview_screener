@@ -3,7 +3,7 @@ Configuration settings for the screener service.
 Uses pydantic-settings for environment variable loading.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 
@@ -19,10 +19,11 @@ class Settings(BaseSettings):
     app_name: str = "TV Screener Service"
     app_version: str = "0.1.0"
 
-    class Config:
-        env_prefix = "SCREENER_SERVICE_"
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_prefix="SCREENER_SERVICE_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
 
 @lru_cache
