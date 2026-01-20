@@ -1,0 +1,45 @@
+# TV Screener+ Progress Log
+
+This file tracks learnings, decisions, and important notes from each completed task.
+It serves as institutional knowledge for anyone continuing work on this codebase.
+
+Last Updated: January 2025
+
+---
+
+## How to Read This File
+
+- Entries are appended chronologically (newest at bottom)
+- Each entry includes: Task ID, Date, Key Learnings
+- Search for specific topics using Ctrl+F
+- Critical warnings marked with [!]
+
+---
+
+## Project Setup
+
+### Initial Planning (January 2025)
+
+**Decisions Made:**
+- Architecture: Python (FastAPI) + TypeScript (Fastify/React) hybrid
+- Database: SQLite with better-sqlite3 (added in Phase B, not MVP)
+- MVP approach: In-memory first, persistence later
+- Development: Direct (no Docker), hot-reload enabled
+
+**Key Documents:**
+- `spec_v2.md` - Full specification with all requirements
+- `tv-screener-implementation-plan.md` - Sprint-by-sprint implementation plan
+- `planner.md` - Planning agent template (reference)
+
+**Workflow:**
+- PLAN MODE: Discuss approach before coding
+- BUILD MODE: Implement after agreement
+- Tests written per task
+
+---
+
+## Sprint Progress
+
+(Entries will be appended below as tasks are completed)
+
+---

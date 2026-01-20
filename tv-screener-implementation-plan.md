@@ -27,7 +27,18 @@
 2. **Implement** the agreed-upon approach
 3. **Write tests** as specified
 4. **Verify** the task works as expected
-5. **Report completion** with summary of what was done
+5. **Update progress.txt** - Append key learnings from this task
+6. **Report completion** with summary of what was done
+
+### Progress Tracking: progress.txt
+
+After each completed task, **APPEND** to `progress.txt`:
+- Task ID and date
+- Key learnings and discoveries
+- Any gotchas or warnings for future developers
+- Decisions made and why
+
+This file serves as institutional knowledge for anyone continuing work on this codebase.
 
 ### Example Workflow
 
