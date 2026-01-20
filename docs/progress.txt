@@ -166,3 +166,121 @@ pytest
 8. `test_scan_response_timing` - Response includes timing metadata
 
 ---
+
+### Sprint 2: TypeScript Backend Setup
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 2.1: Initialize TypeScript/Fastify Project
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Set up Node.js project with TypeScript, Fastify, and strict type checking
+- Created Fastify server with CORS for local development
+- Added health endpoint at /api/health
+
+**Files Created:**
+- `app/package.json` - Project dependencies (fastify, @fastify/cors, tsx, vitest)
+- `app/tsconfig.json` - Strict TypeScript configuration
+- `app/tsconfig.server.json` - Server-specific build config
+- `app/vitest.config.ts` - Vitest test configuration
+- `app/src/server/index.ts` - Fastify server entry point
+- `app/src/server/config.ts` - Configuration from environment variables
+- `app/tests/health.test.ts` - Health endpoint tests
+
+**Key Learnings:**
+- [!] With `noPropertyAccessFromIndexSignature`, must use bracket notation for process.env:
+  - CORRECT: `process.env["APP_PORT"]`
+  - WRONG: `process.env.APP_PORT`
+
+- Strict TypeScript settings enabled:
+  - `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`
+  - `noUnusedLocals`, `noUnusedParameters`
+  - `exactOptionalPropertyTypes`, `noImplicitReturns`
+  - `noUncheckedIndexedAccess`, `noPropertyAccessFromIndexSignature`
+
+- tsx (via `tsx watch`) provides fast TypeScript execution without compilation step
+
+**How to Run:**
+```bash
+cd app
+npm install
+npm run dev:server  # Starts on port 3000
+npm test            # Run tests
+```
+
+---
+
+### Task 2.2: Create Screener Client Service
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created TypeScript types matching Python API models
+- Implemented ScreenerClient class using ofetch for HTTP calls
+- Added custom ScreenerServiceError for proper error handling
+
+**Files Created:**
+- `app/src/server/types/screener.ts` - TypeScript types for API
+- `app/src/server/services/screenerClient.ts` - HTTP client for Python service
+- `app/tests/screenerClient.test.ts` - Client integration tests (6 tests)
+
+**Key Learnings:**
+- ofetch provides clean async HTTP with automatic JSON parsing
+- Custom error class (ScreenerServiceError) preserves HTTP status codes and details
+- Type assertions needed for indexed access with `noUncheckedIndexedAccess`
+
+**TypeScript Types:**
+```typescript
+interface ScanRequest {
+  markets?: string[];
+  columns: string[];
+  filters?: Filter[];
+  orderBy?: OrderBy;
+  limit?: number;
+  offset?: number;
+}
+
+interface ScanResponse {
+  totalCount: number;
+  results: Record<string, unknown>[];
+  timestamp: string;
+  durationMs: number;
+}
+```
+
+---
+
+### Task 2.3: Create Proxy Routes
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created Fastify routes that proxy to Python service
+- Added error handling that forwards Python errors with correct status codes
+- Registered routes in main server file
+
+**Files Created/Modified:**
+- `app/src/server/routes/screener.ts` - Screener proxy routes
+- `app/src/server/index.ts` - Added route registration
+- `app/tests/routes.test.ts` - Route integration tests (5 tests)
+
+**Endpoints:**
+- `POST /api/scan` - Proxy to Python /scan
+- `GET /api/screener/health` - Proxy to Python /health
+- `GET /api/health` - Node.js service health (direct)
+
+**Key Learnings:**
+- Fastify routes use async/await pattern naturally
+- Error responses must explicitly return reply to satisfy type checker
+- Integration tests require both Python and Node services running
+
+**Tests (13 total across Sprint 2):**
+- health.test.ts: 2 tests (Node health endpoint)
+- screenerClient.test.ts: 6 tests (Python API client)
+- routes.test.ts: 5 tests (Proxy route integration)
+
+---

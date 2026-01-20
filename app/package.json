@@ -1,0 +1,22 @@
+{
+  "name": "tv-screener-app",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:server": "tsx watch src/server/index.ts",
+    "build:server": "tsc -p tsconfig.server.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^10.0.2",
+    "ofetch": "^1.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.0"
+  }
+}
