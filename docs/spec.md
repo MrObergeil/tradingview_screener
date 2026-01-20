@@ -1,6 +1,6 @@
 # TV Screener+ Project Specification
 
-**Version:** 0.2 (Final Prototype Spec)
+**Version:** 0.3 (Implementation Ready)
 **Date:** January 2025
 **Status:** Ready for implementation
 
@@ -148,7 +148,7 @@ CREATE TABLE watchlists (
 CREATE TABLE watchlist_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     watchlist_id INTEGER NOT NULL,
-    ticker TEXT NOT NULL,  -- e.g., "NASDAQ:AAPL"
+    ticker TEXT NOT NULL,  -- e.g., "AAPL" (simple symbol, no exchange prefix)
     added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (watchlist_id) REFERENCES watchlists(id) ON DELETE CASCADE,
     UNIQUE(watchlist_id, ticker)
@@ -380,6 +380,7 @@ interface MomentumConfig {
   };
   
   // Volume scoring
+  // TODO: Verify `relative_volume_10d_calc` field exists in TradingView API during implementation
   volume: {
     relativeVolumeMin: number;  // e.g., 1.2
     relativeVolumeBonus: number; // e.g., 2.0 (extra points if above)
@@ -503,7 +504,8 @@ type AlertRuleType = "screener" | "watchlist" | "ticker";
 
 interface AlertCondition {
   field: string;          // e.g., "RSI", "momentumScore", "close"
-  operator: "gt" | "gte" | "lt" | "lte" | "crosses_above" | "crosses_below";
+  operator: "gt" | "gte" | "lt" | "lte";  // V1: threshold alerts only
+  // TODO (V2): Add "crosses_above" | "crosses_below" operators (requires historical state tracking)
   value: number;
 }
 
@@ -589,7 +591,9 @@ const DEFAULT_SCHEDULES = [
 
 ---
 
-## 9. UI Components (React)
+## 9. Frontend / UI / UX Design
+
+> **NOTE:** This section is a placeholder. Frontend/UI/UX design will be planned and iterated on separately in a later phase. The component structure below is a rough outline only.
 
 ### Pages
 
@@ -814,6 +818,14 @@ NODE_ENV=development
 | Testing | Vitest | Fast, native TS support |
 | Timeframes | 4h, daily, weekly | Prototype scope |
 | Markets | US equities only | Prototype scope |
+| Momentum fields | Fetch only when requested | Minimize API calls, fetch only what's needed |
+| Alert operators (V1) | Threshold only (gt/lt/etc.) | Crossing operators deferred to V2 (needs state) |
+| Scheduled scans | App must be open | No background daemon for V1 |
+| Ticker input format | Simple symbol (e.g., `AAPL`) | No exchange prefix needed |
+| Filter logic | AND + OR (nested) | Support both for flexible queries |
+| Results table columns | Fixed defaults + fully customizable | User can add/remove any column |
+| Development setup | Direct (Python + Node) | Docker added later for deployment |
+| Frontend/UI/UX | Planned separately | Will iterate in dedicated phase |
 
 ---
 
@@ -848,3 +860,4 @@ NODE_ENV=development
 |---------|------|---------|
 | 0.1 | Jan 2025 | Initial draft |
 | 0.2 | Jan 2025 | Final decisions: SQLite storage, browser notifications, full API contracts, momentum logic, UI components |
+| 0.3 | Jan 2025 | Implementation planning: V1 simplifications (threshold alerts only, app-open scheduling), development setup (direct, no Docker), UI/UX marked for separate planning phase, ticker format simplified, nested filter logic confirmed |

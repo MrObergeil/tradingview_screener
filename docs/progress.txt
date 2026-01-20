@@ -26,9 +26,10 @@ Last Updated: January 2025
 - MVP approach: In-memory first, persistence later
 - Development: Direct (no Docker), hot-reload enabled
 
-**Key Documents:**
+**Key Documents (in `docs/`):**
 - `spec_v2.md` - Full specification with all requirements
 - `tv-screener-implementation-plan.md` - Sprint-by-sprint implementation plan
+- `progress.txt` - This file (append-only learning log)
 - `planner.md` - Planning agent template (reference)
 
 **Workflow:**
@@ -41,5 +42,28 @@ Last Updated: January 2025
 ## Sprint Progress
 
 (Entries will be appended below as tasks are completed)
+
+---
+
+### Task 1.1: Initialize Project Structure
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created monorepo folder structure: `screener-service/`, `app/`, `docs/`
+- Moved all spec/planning files to `docs/` folder
+- Created `AGENTS.md` at root with instructions for AI agents
+- Created `.gitignore` for Python + Node.js artifacts
+
+**Key Learnings:**
+- Keep documentation centralized in `docs/` for easy discovery
+- `AGENTS.md` ensures any AI agent reads specs before making changes
+- Empty placeholder files (`__init__.py`, `requirements.txt`, `package.json`) help establish structure
+
+**File Locations:**
+- Specs and plans: `docs/`
+- Python service: `screener-service/src/`
+- TypeScript backend: `app/src/server/`
+- React frontend: `app/src/client/`
 
 ---
