@@ -284,3 +284,111 @@ interface ScanResponse {
 - routes.test.ts: 5 tests (Proxy route integration)
 
 ---
+
+### Sprint 3: Basic React UI
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 3.1: Initialize React/Vite Project
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Set up Vite with React and TypeScript
+- Configured Tailwind CSS for styling
+- Created basic App component with header and main content
+- Added Vite proxy to backend (port 3000)
+
+**Files Created:**
+- `app/vite.config.ts` - Vite configuration with proxy
+- `app/tailwind.config.js` - Tailwind configuration
+- `app/postcss.config.js` - PostCSS configuration
+- `app/src/client/index.html` - HTML entry point
+- `app/src/client/main.tsx` - React entry point
+- `app/src/client/App.tsx` - Main App component
+- `app/src/client/styles/index.css` - Tailwind imports
+- `app/tests/client/App.test.tsx` - App component tests
+
+**Key Learnings:**
+- [!] Must add `"jsx": "react-jsx"` to tsconfig.json for JSX support
+- [!] Testing-library needs `cleanup()` in afterEach to prevent duplicate elements
+- Vite's root option changes the project root for client files
+- Vitest `environmentMatchGlobs` allows different environments per test folder
+
+**How to Run:**
+```bash
+cd app
+npm run dev:client  # Starts Vite on port 5173
+npm run dev         # Starts both server and client concurrently
+```
+
+---
+
+### Task 3.2: Create TickerInput Component
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created TickerInput component for comma-separated ticker entry
+- Implemented input validation and parsing
+- Added loading state and disabled states
+- Styled with Tailwind CSS
+
+**Files Created:**
+- `app/src/client/components/TickerInput.tsx` - Ticker input component
+- `app/tests/client/TickerInput.test.tsx` - Component tests (9 tests)
+
+**Key Learnings:**
+- Parse tickers: split by comma, trim, uppercase, filter empty
+- useCallback for event handlers to prevent unnecessary re-renders
+- Show ticker count feedback as user types
+
+**Component Props:**
+```typescript
+interface TickerInputProps {
+  onScan: (tickers: string[]) => void;
+  isLoading?: boolean;
+}
+```
+
+---
+
+### Task 3.3: Create API Client & Connect to Backend
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created frontend API client with typed fetch
+- Implemented useScreener hook for scan state management
+- Connected TickerInput to API via hook
+- Added results table display with formatting
+
+**Files Created:**
+- `app/src/client/api/client.ts` - Typed API client
+- `app/src/client/hooks/useScreener.ts` - Screener state hook
+
+**Key Learnings:**
+- Frontend API client uses native fetch (simpler than ofetch for client)
+- useScreener hook manages loading/error/data state
+- Format helpers for numbers, percentages, and volumes
+- Color coding for positive/negative changes
+
+**Hook Interface:**
+```typescript
+interface UseScreenerReturn {
+  data: ScanResponse | null;
+  isLoading: boolean;
+  error: string | null;
+  executeScan: (tickers: string[], columns?: string[]) => Promise<void>;
+  clearError: () => void;
+  clearData: () => void;
+}
+```
+
+**Tests (25 total across all sprints):**
+- Server tests: 13 (health, screenerClient, routes)
+- Client tests: 12 (App: 3, TickerInput: 9)
+
+---
