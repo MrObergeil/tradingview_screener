@@ -51,6 +51,20 @@ export interface ApiError {
   detail?: string;
 }
 
+/** Single ticker result from search */
+export interface TickerResult {
+  name: string;
+  description: string;
+  exchange: string;
+  type: string;
+}
+
+/** Ticker search response */
+export interface TickerSearchResponse {
+  results: TickerResult[];
+  count: number;
+}
+
 /** Check if response is an error */
 function isApiError(data: unknown): data is ApiError {
   return typeof data === "object" && data !== null && "error" in data;
@@ -86,5 +100,22 @@ export async function checkHealth(): Promise<{ status: string; timestamp: string
   if (!response.ok) {
     throw new Error(`Health check failed: ${response.statusText}`);
   }
+  return response.json();
+}
+
+/**
+ * Search for tickers by name or description.
+ */
+export async function searchTickers(
+  query: string,
+  limit = 10
+): Promise<TickerSearchResponse> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  const response = await fetch(`/api/tickers/search?${params}`);
+
+  if (!response.ok) {
+    throw new Error(`Ticker search failed: ${response.statusText}`);
+  }
+
   return response.json();
 }

@@ -41,6 +41,33 @@ export async function screenerRoutes(app: FastifyInstance): Promise<void> {
       return handleScreenerError(error, reply);
     }
   });
+
+  /**
+   * GET /api/tickers/search - Search for tickers by name/description
+   */
+  app.get(
+    "/api/tickers/search",
+    async (
+      request: FastifyRequest<{ Querystring: { q: string; limit?: string } }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const query = request.query.q;
+        const limit = request.query.limit
+          ? parseInt(request.query.limit, 10)
+          : 10;
+
+        if (!query) {
+          return reply.status(400).send({ error: "Query parameter 'q' is required" });
+        }
+
+        const result = await screenerClient.searchTickers(query, limit);
+        return result;
+      } catch (error) {
+        return handleScreenerError(error, reply);
+      }
+    }
+  );
 }
 
 /**

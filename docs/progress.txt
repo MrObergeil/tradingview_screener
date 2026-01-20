@@ -499,3 +499,20 @@ interface UseScreenerReturn {
 - **frontend-responsive-ui**: Grid layout with responsive breakpoints (sm:grid-cols-2, lg:grid-cols-4)
 
 ---
+
+---
+
+## Backlog / Future Enhancements
+
+### Sector/Industry Filtering (Sprint 4 extension)
+**Priority:** High
+**Reason:** User wants to filter stocks by category (e.g., technology stocks between $50-$250)
+
+**Implementation:**
+- TradingView API supports `sector` and `industry` fields
+- Sectors include: Electronic Technology, Technology Services, Consumer Durables, Retail Trade, etc.
+- Add multi-select dropdown to BasicFilters component
+- Send sector filter to API: `{ field: "sector", op: "in", value: ["Electronic Technology", "Technology Services"] }`
+
+**Data available:** Sector data already in `screener-service/data/tickers.json`
+

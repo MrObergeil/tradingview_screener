@@ -8,6 +8,7 @@ import type {
   ScanRequest,
   ScanResponse,
   HealthResponse,
+  TickerSearchResponse,
 } from "../types/screener.js";
 
 /** Error thrown when screener service call fails */
@@ -56,6 +57,23 @@ export class ScreenerClient {
       return response;
     } catch (error) {
       throw this.handleError(error, "health");
+    }
+  }
+
+  /**
+   * Search for tickers by name or description.
+   */
+  async searchTickers(query: string, limit = 10): Promise<TickerSearchResponse> {
+    try {
+      const response = await ofetch<TickerSearchResponse>(
+        `${this.baseUrl}/tickers/search`,
+        {
+          query: { q: query, limit },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw this.handleError(error, "searchTickers");
     }
   }
 

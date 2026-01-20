@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { scan, type ScanRequest, type ScanResponse, type Filter } from "../api/client";
+import { scan, type ScanRequest, type ScanResponse, type Filter } from "../lib/client";
 
 interface UseScreenerState {
   data: ScanResponse | null;
@@ -8,7 +8,7 @@ interface UseScreenerState {
 }
 
 interface UseScreenerReturn extends UseScreenerState {
-  executeScan: (tickers: string[], columns?: string[], additionalFilters?: Filter[]) => Promise<void>;
+  executeScan: (tickers: string[], columns?: string[], additionalFilters?: Filter[]) => Promise<ScanResponse | null>;
   setFilters: (filters: Filter[]) => void;
   clearError: () => void;
   clearData: () => void;
@@ -46,7 +46,7 @@ export function useScreener(): UseScreenerReturn {
       tickers: string[],
       columns: string[] = DEFAULT_COLUMNS,
       additionalFilters: Filter[] = []
-    ) => {
+    ): Promise<ScanResponse | null> => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
@@ -55,7 +55,7 @@ export function useScreener(): UseScreenerReturn {
           {
             field: "name",
             op: "in",
-            value: tickers.map((t) => `NASDAQ:${t}`),
+            value: tickers, // name field is just the symbol (e.g., "AAPL"), not "NASDAQ:AAPL"
           },
           ...filtersRef.current,
           ...additionalFilters,
@@ -69,10 +69,12 @@ export function useScreener(): UseScreenerReturn {
 
         const response = await scan(request);
         setState({ data: response, isLoading: false, error: null });
+        return response;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "An unknown error occurred";
         setState((prev) => ({ ...prev, isLoading: false, error: errorMessage }));
+        return null;
       }
     },
     []

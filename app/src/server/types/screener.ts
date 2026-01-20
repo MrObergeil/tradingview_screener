@@ -60,3 +60,17 @@ export interface HealthResponse {
 export interface ErrorResponse {
   detail: string;
 }
+
+/** Single ticker result from search */
+export interface TickerResult {
+  name: string;
+  description: string;
+  exchange: string;
+  type: string;
+}
+
+/** Response body from /tickers/search endpoint */
+export interface TickerSearchResponse {
+  results: TickerResult[];
+  count: number;
+}

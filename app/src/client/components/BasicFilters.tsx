@@ -1,5 +1,5 @@
 import { useState, useCallback, type ChangeEvent, type FormEvent } from "react";
-import type { Filter } from "../api/client";
+import type { Filter } from "../lib/client";
 
 export interface FilterValues {
   priceMin: string;
