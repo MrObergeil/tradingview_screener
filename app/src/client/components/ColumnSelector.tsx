@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { getFields, type FieldInfo } from "../lib/client";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useFields } from "../hooks/useFields";
 
 /** Default columns to show */
 const DEFAULT_COLUMNS = ["name", "close", "change", "change_abs", "volume", "market_cap_basic"];
@@ -16,38 +16,32 @@ export default function ColumnSelector({
   selectedColumns,
   onColumnsChange,
 }: ColumnSelectorProps) {
-  const [fields, setFields] = useState<FieldInfo[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  // Use shared fields hook (cached across components)
+  const { fields, categories, isLoading } = useFields();
 
-  // Fetch fields on mount
-  useEffect(() => {
-    const fetchFields = async () => {
-      try {
-        const response = await getFields();
-        setFields(response.fields);
-        setCategories(response.categories);
-      } catch (error) {
-        console.error("Failed to fetch fields:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    void fetchFields();
-  }, []);
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchQuery("");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
 
   const handleToggleColumn = useCallback(
     (columnName: string) => {
@@ -76,22 +70,42 @@ export default function ColumnSelector({
     [selectedColumns, onColumnsChange]
   );
 
-  // Get display name for a column
-  const getDisplayName = useCallback(
-    (columnName: string): string => {
-      const field = fields.find((f) => f.name === columnName);
-      return field?.displayName ?? columnName;
-    },
+  // Create a Map for O(1) display name lookups (memoized)
+  const displayNameMap = useMemo(
+    () => new Map(fields.map((f) => [f.name, f.displayName])),
     [fields]
   );
 
-  // Group fields by category
-  const fieldsByCategory = categories.reduce(
-    (acc, category) => {
-      acc[category] = fields.filter((f) => f.category === category);
-      return acc;
+  // Get display name for a column - O(1) lookup
+  const getDisplayName = useCallback(
+    (columnName: string): string => {
+      return displayNameMap.get(columnName) ?? columnName;
     },
-    {} as Record<string, FieldInfo[]>
+    [displayNameMap]
+  );
+
+  // Filter fields based on search query (memoized)
+  const filteredFields = useMemo(() => {
+    if (!searchQuery) return fields;
+    const lowerQuery = searchQuery.toLowerCase();
+    return fields.filter(
+      (f) =>
+        f.displayName.toLowerCase().includes(lowerQuery) ||
+        f.name.toLowerCase().includes(lowerQuery)
+    );
+  }, [fields, searchQuery]);
+
+  // Group filtered fields by category (memoized)
+  const fieldsByCategory = useMemo(
+    () =>
+      categories.reduce(
+        (acc, category) => {
+          acc[category] = filteredFields.filter((f) => f.category === category);
+          return acc;
+        },
+        {} as Record<string, { name: string; displayName: string; type: string; category: string }[]>
+      ),
+    [categories, filteredFields]
   );
 
   if (isLoading) {
@@ -143,31 +157,55 @@ export default function ColumnSelector({
 
         {/* Dropdown menu */}
         {isOpen && (
-          <div className="absolute z-20 mt-1 w-72 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-auto">
-            {categories.map((category) => (
-              <div key={category}>
-                <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide sticky top-0">
-                  {category}
+          <div className="absolute z-20 mt-1 w-80 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 flex flex-col">
+            {/* Search input */}
+            <div className="p-2 border-b border-gray-200">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search columns..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            {/* Fields list */}
+            <div className="overflow-auto flex-1">
+              {categories.map((category) => {
+                const categoryFields = fieldsByCategory[category];
+                if (!categoryFields?.length) return null;
+
+                return (
+                  <div key={category}>
+                    <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide sticky top-0">
+                      {category}
+                    </div>
+                    {categoryFields.map((field) => (
+                      <label
+                        key={field.name}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.includes(field.name)}
+                          onChange={() => handleToggleColumn(field.name)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm flex-1">{field.displayName}</span>
+                        <span className="text-xs text-gray-400">
+                          {field.type}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })}
+              {filteredFields.length === 0 && (
+                <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                  No columns match "{searchQuery}"
                 </div>
-                {fieldsByCategory[category]?.map((field) => (
-                  <label
-                    key={field.name}
-                    className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedColumns.includes(field.name)}
-                      onChange={() => handleToggleColumn(field.name)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{field.displayName}</span>
-                    <span className="text-xs text-gray-400 ml-auto">
-                      {field.type}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         )}
       </div>

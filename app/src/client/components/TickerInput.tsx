@@ -12,18 +12,37 @@ import { searchTickers, type TickerResult } from "../lib/client";
 interface TickerInputProps {
   onScan: (tickers: string[]) => void;
   isLoading?: boolean;
+  submitLabel?: string;
+  initialTickers?: string[];
 }
 
 /**
  * Input component for entering comma-separated ticker symbols with autocomplete.
  */
-export default function TickerInput({ onScan, isLoading = false }: TickerInputProps) {
-  const [inputValue, setInputValue] = useState("");
+export default function TickerInput({
+  onScan,
+  isLoading = false,
+  submitLabel = "Scan",
+  initialTickers,
+}: TickerInputProps) {
+  const [inputValue, setInputValue] = useState(() =>
+    initialTickers?.length ? initialTickers.join(", ") : ""
+  );
   const [suggestions, setSuggestions] = useState<TickerResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Get the current word being typed (after the last comma)
   const getCurrentWord = useCallback(() => {
@@ -125,8 +144,12 @@ export default function TickerInput({ onScan, isLoading = false }: TickerInputPr
   );
 
   const handleBlur = useCallback(() => {
+    // Clear any existing blur timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
     // Delay hiding to allow click on suggestion
-    setTimeout(() => setShowSuggestions(false), 150);
+    blurTimeoutRef.current = setTimeout(() => setShowSuggestions(false), 150);
   }, []);
 
   const handleFocus = useCallback(() => {
@@ -192,7 +215,7 @@ export default function TickerInput({ onScan, isLoading = false }: TickerInputPr
         disabled={isDisabled}
         className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
       >
-        {isLoading ? "Scanning..." : "Scan"}
+        {isLoading ? "Processing..." : submitLabel}
       </button>
     </form>
   );

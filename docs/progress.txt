@@ -500,6 +500,395 @@ interface UseScreenerReturn {
 
 ---
 
+### Sprint 5 Enhancement: Draggable & Resizable Columns
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Added drag-to-reorder columns via HTML5 drag-drop API
+- Added column resize handles on table headers
+- Visual feedback during drag (opacity, blue highlight on drop target)
+- Column widths persist during session
+
+**Files Modified:**
+- `app/src/client/components/ResultsTable.tsx` - Added drag/resize handlers
+- `app/src/client/App.tsx` - Connected onColumnsChange to update state
+
+**Key Learnings:**
+- Use `draggable={false}` on resize handles to prevent drag interference
+- Resize handles need wider hit area (12px vs 4px) for usability
+- `table-fixed` layout required for precise width control
+
+---
+
+## Phase B: Persistence & Core Features
+
+---
+
+### Sprint 6: SQLite Setup & Schema
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 6.1: Set Up better-sqlite3
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Installed better-sqlite3 and @types/better-sqlite3
+- Created database connection singleton with WAL mode
+- Added graceful shutdown handling
+- Database path configurable via DATABASE_PATH env var
+
+**Files Created:**
+- `app/src/server/db/index.ts` - Database connection singleton
+- `app/tests/db.test.ts` - Database connection tests (3 tests)
+
+**Files Modified:**
+- `app/src/server/config.ts` - Added databasePath config
+- `app/src/server/index.ts` - Added database init and shutdown
+
+**Key Learnings:**
+- WAL mode (`pragma("journal_mode = WAL")`) enables better concurrency
+- Foreign keys must be enabled explicitly: `pragma("foreign_keys = ON")`
+- Create parent directories automatically: `mkdirSync(dir, { recursive: true })`
+
+---
+
+### Task 6.2: Create Database Schema
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created full schema matching spec_v2.md (14 tables)
+- Implemented simple version-based migration system
+- Migrations run automatically on database connection
+- Added indexes for common queries
+
+**Files Created:**
+- `app/src/server/db/schema.ts` - Schema definitions and migrations
+- `app/tests/schema.test.ts` - Schema tests (13 tests)
+
+**Tables Created:**
+- `schema_version` - Migration tracking
+- `watchlists` - Watchlist metadata
+- `watchlist_items` - Tickers in watchlists
+- `watchlist_item_tags` - Tags for watchlist items
+- `screener_configs` - Saved screener configurations
+- `alert_rules` - Alert rule definitions
+- `alert_cooldowns` - Per-ticker cooldown tracking
+- `momentum_configs` - Momentum scoring configs
+- `alert_history` - Alert trigger history
+- `user_preferences` - Key-value preferences
+- `favorite_fields` - User's favorite fields
+- `keyboard_shortcuts` - Custom shortcuts
+- `scan_stats` - Scan statistics
+- `top_performers` - Frequently appearing tickers
+
+**Key Learnings:**
+- SQLite uses TEXT for timestamps (ISO format), not DATETIME type
+- JSON stored as TEXT in SQLite, parsed in application layer
+- Use `IF NOT EXISTS` for idempotent migrations
+- Cascading deletes with `ON DELETE CASCADE`
+
+---
+
+### Task 6.3: Create Base Repository Pattern
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created generic BaseRepository with typed CRUD operations
+- Implemented: findById, findAll, findBy, create, update, delete
+- Added transaction support with automatic rollback
+- Created custom DatabaseError for error handling
+
+**Files Created:**
+- `app/src/server/db/repositories/base.ts` - Generic repository
+- `app/tests/repositories/base.test.ts` - Repository tests (27 tests)
+
+**Repository Methods:**
+```typescript
+findById(id): T | undefined
+findByIdOrThrow(id): T
+findAll(orderBy?, direction?): T[]
+findBy(column, value): T[]
+findOneBy(column, value): T | undefined
+create(data): T
+update(id, data): T
+delete(id): boolean
+deleteOrThrow(id): void
+count(): number
+exists(id): boolean
+transaction(fn): R
+```
+
+**Key Learnings:**
+- Use TypeScript generics for type-safe repositories
+- `Omit<T, "id" | "created_at">` for CreateEntity type
+- Wrap errors in DatabaseError with operation context
+- Transaction pattern: `db.transaction(fn)()`
+
+**Tests (85 total across Sprint 6 + previous):**
+- db.test.ts: 3 tests
+- schema.test.ts: 13 tests
+- base.test.ts: 27 tests
+- Client tests: 42 tests
+
+---
+
+### Sprint 7: Watchlist Backend
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 7.1: Watchlist Repository
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Extended BaseRepository with watchlist-specific operations
+- Implemented CRUD for watchlists, items, and tags
+- Added batch operations (addItems) with duplicate handling
+- Cascading deletes work via foreign keys
+
+**Files Created:**
+- `app/src/server/db/repositories/watchlist.ts` - Watchlist repository
+- `app/tests/repositories/watchlist.test.ts` - Repository tests (32 tests)
+
+**Key Methods:**
+```typescript
+// Watchlists
+findByName(name): Watchlist | undefined
+findWithItems(id): WatchlistWithItems | undefined
+findAllWithCounts(): (Watchlist & { itemCount: number })[]
+
+// Items
+getItems(watchlistId): WatchlistItem[]
+addItem(watchlistId, ticker, notes?): WatchlistItem
+addItems(watchlistId, tickers): { added, skipped }
+updateItemNotes(itemId, notes): WatchlistItem
+removeItem(watchlistId, ticker): boolean
+
+// Tags
+getItemTags(itemId): string[]
+setItemTags(itemId, tags): void
+getAllTags(): string[]
+```
+
+---
+
+### Task 7.2: Watchlist API Routes
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created RESTful API routes for watchlist management
+- Proper HTTP status codes (201 created, 204 no content, 404/409 errors)
+- Input validation on all endpoints
+- Database attached to Fastify app instance
+
+**Files Created:**
+- `app/src/server/routes/watchlist.ts` - Watchlist API routes
+- `app/tests/watchlistRoutes.test.ts` - Route tests (35 tests)
+
+**Files Modified:**
+- `app/src/server/index.ts` - Register watchlist routes
+
+**API Endpoints:**
+```
+GET    /api/watchlists           - List all watchlists with item counts
+POST   /api/watchlists           - Create watchlist
+GET    /api/watchlists/:id       - Get watchlist with items and tags
+PUT    /api/watchlists/:id       - Update watchlist
+DELETE /api/watchlists/:id       - Delete watchlist
+
+POST   /api/watchlists/:id/items       - Add ticker
+POST   /api/watchlists/:id/items/batch - Add multiple tickers
+PUT    /api/watchlists/:id/items/:itemId - Update item notes/tags
+DELETE /api/watchlists/:id/items/:itemId - Remove item
+
+GET    /api/tags                 - Get all unique tags
+```
+
+---
+
+### Task 7.3: Watchlist Import/Export
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Import endpoint with format auto-detection
+- Support for CSV, JSON, plain text, TradingView formats
+- Export to CSV or JSON with proper headers
+- TradingView format strips exchange prefixes (NASDAQ:AAPL → AAPL)
+
+**Import Formats Supported:**
+- **Plain text**: One ticker per line or comma-separated
+- **CSV**: With or without header row
+- **JSON**: Array or `{tickers: [...]}` or `{items: [{ticker: ...}]}`
+- **TradingView**: `NASDAQ:AAPL, NYSE:MSFT` format
+
+**API Endpoints:**
+```
+POST /api/watchlists/import          - Import tickers to new watchlist
+GET  /api/watchlists/:id/export      - Export as CSV (default) or JSON
+GET  /api/watchlists/:id/export?format=json
+```
+
+**Key Learnings:**
+- Auto-detect format: JSON starts with `{`/`[`, TradingView has `:` prefix
+- Use `toUpperCase()` consistently for ticker storage
+- CSV export: escape quotes with `""`
+- Return proper Content-Disposition header for downloads
+
+**Tests (152 total):**
+- watchlist.test.ts: 32 tests (repository)
+- watchlistRoutes.test.ts: 35 tests (API routes + import/export)
+
+---
+
+---
+
+### Sprint 8: Watchlist Frontend
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 8.1-8.3: Watchlist UI Components
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created WatchlistPanel container component with navigation
+- Created WatchlistList component showing all watchlists with counts
+- Created WatchlistDetail component for viewing/editing watchlists
+- Created ImportModal for importing tickers (CSV, JSON, text, TradingView)
+- Added ticker autocomplete in watchlist detail (same as screener input)
+- Integrated watchlists into App.tsx with tab navigation
+
+**Files Created:**
+- `app/src/client/components/watchlist/WatchlistPanel.tsx` - Container with navigation
+- `app/src/client/components/watchlist/WatchlistList.tsx` - List of all watchlists
+- `app/src/client/components/watchlist/WatchlistDetail.tsx` - Single watchlist view
+- `app/src/client/components/watchlist/ImportModal.tsx` - Import modal
+
+**Files Modified:**
+- `app/src/client/lib/client.ts` - Added watchlist API functions
+- `app/src/client/App.tsx` - Added Watchlists tab, integrated WatchlistPanel
+
+**Key Features:**
+- Create, view, edit, delete watchlists
+- Add/remove tickers with notes and tags
+- Import from multiple formats with live preview
+- Export to CSV
+- Scan individual tickers or entire watchlists
+- Ticker autocomplete when adding to watchlist
+
+**Key Learnings:**
+- [!] With `exactOptionalPropertyTypes`, can't pass `undefined` to optional props
+  - CORRECT: `...(value && { prop: value })`
+  - WRONG: `{ prop: value || undefined }`
+- React `key` prop can force component re-mount when loading saved state
+
+---
+
+### Sprint 9: Screener Config Persistence
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 9.1-9.3: Saved Screener Configurations
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created ScreenerConfigRepository for managing saved configs
+- Added API routes for config CRUD operations
+- Created ConfigManager UI component with Save/Load buttons
+- Integrated into App.tsx filters section
+
+**Files Created:**
+- `app/src/server/db/repositories/screenerConfig.ts` - Config repository
+- `app/src/server/routes/screenerConfig.ts` - Config API routes
+- `app/src/client/components/ConfigManager.tsx` - Save/Load UI
+
+**Files Modified:**
+- `app/src/server/index.ts` - Registered config routes
+- `app/src/client/lib/client.ts` - Added config API functions
+- `app/src/client/App.tsx` - Integrated ConfigManager, added state tracking
+- `app/src/client/components/BasicFilters.tsx` - Added initialFilters prop
+
+**API Endpoints:**
+```
+GET    /api/configs           - List all configs
+GET    /api/configs/:id       - Get single config
+POST   /api/configs           - Create config
+PUT    /api/configs/:id       - Update config
+DELETE /api/configs/:id       - Delete config
+POST   /api/configs/:id/duplicate - Duplicate config
+```
+
+**Key Learnings:**
+- Config data structure: `{ columns: string[], filters: Filter[], orderBy?: OrderBy }`
+- Use React `key` prop to force BasicFilters re-mount when loading config
+- Track `currentFilters` in App state for saving
+
+---
+
+### Sprint 10: User Preferences
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 10.1-10.3: Preferences & Settings
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created PreferencesRepository for key-value settings and favorite fields
+- Added API routes for preferences and favorites
+- Created Settings tab with preferences UI
+- Added favorite fields manager
+
+**Files Created:**
+- `app/src/server/db/repositories/preferences.ts` - Preferences repository
+- `app/src/server/routes/preferences.ts` - Preferences API routes
+- `app/src/client/components/SettingsPanel.tsx` - Settings UI
+
+**Files Modified:**
+- `app/src/server/index.ts` - Registered preferences routes
+- `app/src/client/lib/client.ts` - Added preferences API functions
+- `app/src/client/App.tsx` - Added Settings tab
+
+**API Endpoints:**
+```
+GET    /api/preferences           - Get all preferences
+GET    /api/preferences/:key      - Get single preference
+PUT    /api/preferences/:key      - Set preference
+DELETE /api/preferences/:key      - Delete preference
+POST   /api/preferences/batch     - Set multiple preferences
+
+GET    /api/favorites/fields      - Get favorite fields
+POST   /api/favorites/fields      - Add favorite field
+DELETE /api/favorites/fields/:name - Remove favorite field
+PUT    /api/favorites/fields      - Set all favorite fields
+```
+
+**Settings Available:**
+- Results per page (25, 50, 100, 200)
+- Auto-refresh toggle with interval
+- Favorite fields for quick column access
+
+**Tests (165 total):**
+- All previous tests still passing
+- New repository and route coverage
+
 ---
 
 ## Backlog / Future Enhancements
@@ -529,4 +918,226 @@ interface UseScreenerReturn {
 **Benefits:**
 - Instant filter/column changes for small scans
 - Still handles large market scans efficiently
+
+---
+
+## Sprint 11: Filter-First Market Scanning
+**Date:** January 2025
+**Status:** Completed
+
+---
+
+### Task 11.1: Filter-First UI Restructure
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Restructured UI from ticker-centric to filter-first workflow
+- Enhanced MarketSelector with grouped options (US Markets, Global, International)
+- Added specific US exchange options: NASDAQ, NYSE, AMEX
+- Created QuickFilters component with 8 preset filter buttons
+- Added searchable column selector dropdown
+
+**Files Created:**
+- `app/src/client/components/QuickFilters.tsx` - Preset filter buttons
+
+**Files Modified:**
+- `app/src/client/components/MarketSelector.tsx` - Added grouped options, exchange filters
+- `app/src/client/components/ColumnSelector.tsx` - Added search functionality
+- `app/src/client/App.tsx` - Integrated QuickFilters, exchange filter handling
+
+**New UI Flow:**
+```
+1. Select market (required) - dropdown with exchange-specific options
+2. Define filters (required) - pill-based filter builder
+3. Apply quick filters (optional) - one-click preset buttons
+4. Limit to tickers (optional) - autocomplete input
+5. Configure columns (optional) - searchable selector
+6. Scan - enabled when market + 1 filter
+```
+
+**Quick Filter Presets:**
+- "Up >5%" - change > 5%
+- "Down >5%" - change < -5%
+- "High Volume" - volume > 10M
+- "Under $10" - close < 10
+- "Large Cap" - market_cap > 10B
+- "Tech Sector" - sector = Technology
+- "Large Cap Tech" - combined preset
+- "Penny Stocks" - close < 5
+
+**Key Learnings:**
+- Use `<optgroup>` for organized dropdown options
+- Exchange filters (NASDAQ/NYSE/AMEX) added as separate filter on scan
+- Quick filters merge with existing filters, avoiding duplicates by field
+
+---
+
+### Task 11.2: Performance Optimizations
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created shared `useFields` hook with module-level cache
+- Eliminated duplicate `getFields()` API calls (was 2, now 1)
+- Added memoization throughout components
+- Fixed memory leak in TickerInput blur handler
+- Fixed click-outside listener re-registration in FilterBuilder
+- Removed `filterKey` anti-pattern from App.tsx
+
+**Files Created:**
+- `app/src/client/hooks/useFields.ts` - Shared fields cache hook
+
+**Files Modified:**
+- `app/src/client/App.tsx` - Removed filterKey, fixed inline callback, extracted helpers
+- `app/src/client/components/FilterBuilder.tsx` - Uses shared hook, memoization
+- `app/src/client/components/ColumnSelector.tsx` - Uses shared hook, O(1) lookups
+- `app/src/client/components/TickerInput.tsx` - Blur timeout cleanup
+
+**Performance Improvements:**
+
+| Issue | Fix | Impact |
+|-------|-----|--------|
+| Duplicate getFields() calls | Shared `useFields` hook with module cache | 1 API call instead of 2 |
+| Inline callback defeating memo | Use existing `handleColumnsChange` | ResultsTable memo works |
+| Missing memoization | Added `useMemo` to fieldsByCategory, displayFields, filteredFields | O(n) → O(1) on re-renders |
+| Click-outside listener churn | Empty dependency array, use refs | Listener registered once |
+| Blur timeout memory leak | Track with ref, cleanup on unmount | No state updates on unmounted |
+| filterKey forcing re-renders | Removed entirely | No unnecessary re-mounts |
+
+**Key Learnings:**
+- [!] Module-level cache pattern for shared data:
+  ```typescript
+  let cache: Data | null = null;
+  let fetchPromise: Promise<Data> | null = null;
+
+  export function useSharedData() {
+    // Return cached data immediately if available
+    // Otherwise wait for single in-flight request
+  }
+  ```
+- [!] Click-outside listeners should use refs, not state in dependencies
+- [!] Inline callbacks in JSX defeat `memo()` optimization
+- Use `Map` instead of `array.find()` for O(1) lookups in render loops
+
+**Tests:**
+- Build succeeds with all changes
+- Pre-existing test failures unrelated to changes (TickerInput tests expect "Scanning..." but component shows "Processing...")
+
+---
+
+### Task 11.3: K/M/B/T Input for Large Numbers
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Added parsing support for K/M/B/T suffixes in market cap filter input
+- Added formatting for "between" operator to show formatted values
+- Market cap values stored as raw USD (not abbreviated)
+
+**Files Modified:**
+- `app/src/client/components/FilterBuilder.tsx` - Added `parseNumberWithSuffix()` and `formatLargeNumber()`
+
+**Number Parsing:**
+```typescript
+// Input: "10B" → 10000000000
+// Input: "1.5M" → 1500000
+// Input: "500K" → 500000
+parseNumberWithSuffix("10B") // → 10000000000
+```
+
+---
+
+### Task 11.4: Pagination
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Created Pagination component with prev/next buttons and page numbers
+- Added offset parameter support to useScreener hook
+- Integrated pagination state into App.tsx
+- Pagination resets to page 1 when filters/market/tickers change
+- Loads resultsPerPage from user preferences (default 50)
+
+**Files Created:**
+- `app/src/client/components/Pagination.tsx` - Pagination controls
+
+**Files Modified:**
+- `app/src/client/hooks/useScreener.ts` - Added offset support
+- `app/src/client/lib/client.ts` - Added offset to ScanOptions
+- `app/src/client/App.tsx` - Integrated pagination state and controls
+
+**Pagination Features:**
+- Shows "Showing X - Y of Z results" info
+- Shows page numbers with ellipsis for large page counts
+- Prev/Next buttons with disabled states
+- Current page highlighted
+- Loads resultsPerPage from preferences API
+
+**Key Learnings:**
+- [!] With `exactOptionalPropertyTypes`, use spread syntax to conditionally include props:
+  ```typescript
+  // CORRECT:
+  const options = {
+    markets,
+    filters,
+    ...(limitTickers.length > 0 && { tickers: limitTickers }),
+    ...(offset !== undefined && { offset }),
+  };
+
+  // WRONG (causes type error):
+  const options = {
+    tickers: limitTickers.length > 0 ? limitTickers : undefined,
+  };
+  ```
+- Page changes trigger new API calls with calculated offset: `(page - 1) * resultsPerPage`
+- Reset page to 1 whenever filters/market/tickers change
+
+---
+
+### Task 11.5: Dark Mode
+**Date:** January 2025
+**Status:** Completed
+
+**What was done:**
+- Added dark mode toggle slider in header (top right)
+- Configured Tailwind for class-based dark mode
+- Created useTheme hook with localStorage persistence
+- Applied dark mode classes to all major components
+- System preference detection for initial theme
+
+**Files Created:**
+- `app/src/client/hooks/useTheme.ts` - Theme state management with persistence
+- `app/src/client/components/ThemeToggle.tsx` - Toggle slider with sun/moon icons
+
+**Files Modified:**
+- `app/tailwind.config.js` - Added `darkMode: "class"`
+- `app/src/client/App.tsx` - Added theme toggle to header, dark mode classes to all panels
+- `app/src/client/components/ResultsTable.tsx` - Dark mode for table
+- `app/src/client/components/Pagination.tsx` - Dark mode for pagination controls
+- `app/src/client/components/FilterBuilder.tsx` - Dark mode for filter pills and popups
+
+**Dark Mode Implementation:**
+- Toggle in header (top right) with sliding knob animation
+- Theme persists to localStorage (`theme` key)
+- Detects system preference on first visit
+- All panels: `bg-white dark:bg-gray-800`
+- All borders: `border-gray-200 dark:border-gray-700`
+- All text: `text-gray-700 dark:text-gray-300`
+- Positive/negative colors adjusted for dark backgrounds
+
+**Key Learnings:**
+- Tailwind `darkMode: "class"` allows manual toggle control
+- Apply `dark` class to `document.documentElement` (html element)
+- Use `prefers-color-scheme` media query for system preference detection
+- Keep color contrast high in dark mode (use lighter shades like gray-300 instead of gray-500)
+- [!] Tailwind's `:is(.dark *)` selectors may require explicit light mode CSS overrides:
+  ```css
+  /* Light mode must use !important to override Tailwind dark styles */
+  html.light body,
+  html:not(.dark) body {
+    background-color: #f3f4f6 !important;
+  }
+  ```
+- Apply theme immediately on module load (before React mounts) to prevent flash
 

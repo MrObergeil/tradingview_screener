@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { scan, type ScanRequest, type ScanResponse, type Filter } from "../lib/client";
+import { useState, useCallback } from "react";
+import { scan, type ScanRequest, type ScanResponse, type Filter, type ScanOptions } from "../lib/client";
 
 interface UseScreenerState {
   data: ScanResponse | null;
@@ -8,8 +8,7 @@ interface UseScreenerState {
 }
 
 interface UseScreenerReturn extends UseScreenerState {
-  executeScan: (tickers: string[], columns?: string[], additionalFilters?: Filter[]) => Promise<ScanResponse | null>;
-  setFilters: (filters: Filter[]) => void;
+  executeScan: (options: ScanOptions) => Promise<ScanResponse | null>;
   clearError: () => void;
   clearData: () => void;
 }
@@ -26,6 +25,7 @@ const DEFAULT_COLUMNS = [
 
 /**
  * Hook for executing screener scans.
+ * Supports filter-first workflow with optional ticker filtering.
  */
 export function useScreener(): UseScreenerReturn {
   const [state, setState] = useState<UseScreenerState>({
@@ -34,37 +34,40 @@ export function useScreener(): UseScreenerReturn {
     error: null,
   });
 
-  // Store filters in a ref to avoid re-creating executeScan
-  const filtersRef = useRef<Filter[]>([]);
-
-  const setFilters = useCallback((filters: Filter[]) => {
-    filtersRef.current = filters;
-  }, []);
-
   const executeScan = useCallback(
-    async (
-      tickers: string[],
-      columns: string[] = DEFAULT_COLUMNS,
-      additionalFilters: Filter[] = []
-    ): Promise<ScanResponse | null> => {
+    async (options: ScanOptions): Promise<ScanResponse | null> => {
+      const { markets, filters, tickers, columns, limit, offset } = options;
+
+      // Validate at least one filter exists (unless tickers are specified)
+      if (filters.length === 0 && (!tickers || tickers.length === 0)) {
+        setState((prev) => ({
+          ...prev,
+          error: "At least one filter is required for market-wide scans",
+        }));
+        return null;
+      }
+
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        // Combine ticker filter with stored filters and additional filters
-        const allFilters: Filter[] = [
-          {
+        // Build filters array
+        const allFilters: Filter[] = [...filters];
+
+        // Add ticker filter if specified
+        if (tickers && tickers.length > 0) {
+          allFilters.push({
             field: "name",
             op: "in",
-            value: tickers, // name field is just the symbol (e.g., "AAPL"), not "NASDAQ:AAPL"
-          },
-          ...filtersRef.current,
-          ...additionalFilters,
-        ];
+            value: tickers,
+          });
+        }
 
         const request: ScanRequest = {
-          columns,
+          markets,
+          columns: columns.length > 0 ? columns : DEFAULT_COLUMNS,
           filters: allFilters,
-          limit: Math.max(tickers.length, 50), // Allow more results with filters
+          limit: limit ?? (tickers?.length ? Math.max(tickers.length, 50) : 100),
+          ...(offset !== undefined && { offset }),
         };
 
         const response = await scan(request);
@@ -91,8 +94,9 @@ export function useScreener(): UseScreenerReturn {
   return {
     ...state,
     executeScan,
-    setFilters,
     clearError,
     clearData,
   };
 }
+
+export { DEFAULT_COLUMNS };

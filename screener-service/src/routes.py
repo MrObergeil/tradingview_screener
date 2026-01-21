@@ -99,13 +99,22 @@ AVAILABLE_FIELDS: list[dict] = [
     {"name": "open", "displayName": "Open", "type": "number", "category": "Price"},
     {"name": "high", "displayName": "High", "type": "number", "category": "Price"},
     {"name": "low", "displayName": "Low", "type": "number", "category": "Price"},
-    {"name": "change", "displayName": "Change %", "type": "percent", "category": "Price"},
-    {"name": "change_abs", "displayName": "Change", "type": "number", "category": "Price"},
+    {"name": "change", "displayName": "Change % (Today)", "type": "percent", "category": "Price"},
+    {"name": "change_abs", "displayName": "Change $ (Today)", "type": "number", "category": "Price"},
+    {"name": "premarket_change", "displayName": "Pre-Market Change %", "type": "percent", "category": "Price"},
+    {"name": "postmarket_change", "displayName": "Post-Market Change %", "type": "percent", "category": "Price"},
+    {"name": "premarket_close", "displayName": "Pre-Market Price", "type": "number", "category": "Price"},
+    {"name": "postmarket_close", "displayName": "Post-Market Price", "type": "number", "category": "Price"},
 
-    # Volume
-    {"name": "volume", "displayName": "Volume", "type": "number", "category": "Volume"},
-    {"name": "relative_volume_10d_calc", "displayName": "Rel Volume", "type": "number", "category": "Volume"},
-    {"name": "average_volume_10d_calc", "displayName": "Avg Volume (10d)", "type": "number", "category": "Volume"},
+    # Volume (in shares)
+    {"name": "volume", "displayName": "Volume Today (shares)", "type": "number", "category": "Volume"},
+    {"name": "relative_volume_10d_calc", "displayName": "Relative Volume (x avg)", "type": "number", "category": "Volume"},
+    {"name": "average_volume_10d_calc", "displayName": "Avg Volume 10d (shares)", "type": "number", "category": "Volume"},
+    {"name": "average_volume_30d_calc", "displayName": "Avg Volume 30d (shares)", "type": "number", "category": "Volume"},
+    {"name": "average_volume_60d_calc", "displayName": "Avg Volume 60d (shares)", "type": "number", "category": "Volume"},
+    {"name": "average_volume_90d_calc", "displayName": "Avg Volume 90d (shares)", "type": "number", "category": "Volume"},
+    {"name": "premarket_volume", "displayName": "Pre-Market Vol (shares)", "type": "number", "category": "Volume"},
+    {"name": "postmarket_volume", "displayName": "Post-Market Vol (shares)", "type": "number", "category": "Volume"},
 
     # Fundamental
     {"name": "market_cap_basic", "displayName": "Market Cap", "type": "number", "category": "Fundamental"},
@@ -120,6 +129,7 @@ AVAILABLE_FIELDS: list[dict] = [
     {"name": "MACD.macd", "displayName": "MACD", "type": "number", "category": "Technical"},
     {"name": "Stoch.K", "displayName": "Stochastic %K", "type": "number", "category": "Technical"},
     {"name": "ATR", "displayName": "ATR", "type": "number", "category": "Technical"},
+    {"name": "ADR", "displayName": "ADR (Avg Daily Range)", "type": "number", "category": "Technical"},
     {"name": "Volatility.D", "displayName": "Volatility", "type": "percent", "category": "Technical"},
 
     # Technical - Moving Averages
@@ -130,11 +140,12 @@ AVAILABLE_FIELDS: list[dict] = [
     {"name": "EMA50", "displayName": "EMA 50", "type": "number", "category": "Moving Averages"},
 
     # Performance
-    {"name": "Perf.W", "displayName": "Perf Week", "type": "percent", "category": "Performance"},
-    {"name": "Perf.1M", "displayName": "Perf Month", "type": "percent", "category": "Performance"},
-    {"name": "Perf.3M", "displayName": "Perf 3M", "type": "percent", "category": "Performance"},
-    {"name": "Perf.6M", "displayName": "Perf 6M", "type": "percent", "category": "Performance"},
-    {"name": "Perf.Y", "displayName": "Perf Year", "type": "percent", "category": "Performance"},
+    {"name": "Perf.W", "displayName": "Change % (Week)", "type": "percent", "category": "Performance"},
+    {"name": "Perf.1M", "displayName": "Change % (Month)", "type": "percent", "category": "Performance"},
+    {"name": "Perf.3M", "displayName": "Change % (3 Months)", "type": "percent", "category": "Performance"},
+    {"name": "Perf.6M", "displayName": "Change % (6 Months)", "type": "percent", "category": "Performance"},
+    {"name": "Perf.Y", "displayName": "Change % (Year)", "type": "percent", "category": "Performance"},
+    {"name": "Perf.YTD", "displayName": "Change % (YTD)", "type": "percent", "category": "Performance"},
 ]
 
 FIELD_CATEGORIES = ["Basic", "Price", "Volume", "Fundamental", "Technical", "Moving Averages", "Performance"]

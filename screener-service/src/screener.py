@@ -114,10 +114,14 @@ class ScreenerService:
         elif op == "in":
             if not isinstance(value, list):
                 raise ValueError(f"Operator 'in' requires a list of values")
+            if len(value) == 0:
+                raise ValueError(f"Operator 'in' requires a non-empty list of values")
             return col.isin(value)
         elif op == "not_in":
             if not isinstance(value, list):
                 raise ValueError(f"Operator 'not_in' requires a list of values")
+            if len(value) == 0:
+                raise ValueError(f"Operator 'not_in' requires a non-empty list of values")
             return col.not_in(value)
         else:
             raise ValueError(f"Unknown filter operator: {op}")

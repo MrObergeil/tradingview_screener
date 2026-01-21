@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useRef, type DragEvent, type MouseEvent } from "react";
 
 /** Stock result row from the API */
 export interface StockResult {
@@ -15,6 +15,7 @@ interface ResultsTableProps {
   results: StockResult[];
   isLoading?: boolean;
   columns?: string[];
+  onColumnsChange?: (columns: string[]) => void;
 }
 
 /** Sort direction */
@@ -108,6 +109,12 @@ function buildColumns(columnNames: string[]): Column[] {
 /** Default column keys */
 const DEFAULT_COLUMN_KEYS = ["name", "close", "change", "change_abs", "volume", "market_cap_basic"];
 
+/** Minimum column width in pixels */
+const MIN_COLUMN_WIDTH = 60;
+
+/** Default column width in pixels */
+const DEFAULT_COLUMN_WIDTH = 120;
+
 /**
  * Results table component for displaying stock scan results.
  * Memoized to prevent unnecessary re-renders.
@@ -116,12 +123,27 @@ function ResultsTableComponent({
   results,
   isLoading = false,
   columns: columnNames = DEFAULT_COLUMN_KEYS,
+  onColumnsChange,
 }: ResultsTableProps) {
   // Sort state
   const [sortState, setSortState] = useState<SortState>({
     column: null,
     direction: "desc",
   });
+
+  // Drag state for column reordering
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+
+  // Column widths state
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+
+  // Resize state
+  const resizeRef = useRef<{
+    column: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
 
   // Build column definitions from column names
   const columns = useMemo(() => buildColumns(columnNames), [columnNames]);
@@ -169,12 +191,97 @@ function ResultsTableComponent({
     });
   }, [results, sortState.column, sortState.direction]);
 
+  // Drag handlers for column reordering
+  const handleDragStart = useCallback((e: DragEvent<HTMLTableCellElement>, columnKey: string) => {
+    setDraggedColumn(columnKey);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", columnKey);
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLTableCellElement>, columnKey: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== columnKey) {
+      setDropTarget(columnKey);
+    }
+  }, [draggedColumn]);
+
+  const handleDragLeave = useCallback(() => {
+    setDropTarget(null);
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent<HTMLTableCellElement>, targetColumnKey: string) => {
+    e.preventDefault();
+    if (!draggedColumn || draggedColumn === targetColumnKey || !onColumnsChange) {
+      setDraggedColumn(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Reorder columns
+    const newColumns = [...columnNames];
+    const draggedIndex = newColumns.indexOf(draggedColumn);
+    const targetIndex = newColumns.indexOf(targetColumnKey);
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      newColumns.splice(draggedIndex, 1);
+      newColumns.splice(targetIndex, 0, draggedColumn);
+      onColumnsChange(newColumns);
+    }
+
+    setDraggedColumn(null);
+    setDropTarget(null);
+  }, [draggedColumn, columnNames, onColumnsChange]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedColumn(null);
+    setDropTarget(null);
+  }, []);
+
+  // Resize handlers
+  const handleResizeStart = useCallback((e: MouseEvent<HTMLDivElement>, columnKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentWidth = columnWidths[columnKey] ?? DEFAULT_COLUMN_WIDTH;
+    resizeRef.current = {
+      column: columnKey,
+      startX: e.clientX,
+      startWidth: currentWidth,
+    };
+
+    const handleMouseMove = (moveEvent: globalThis.MouseEvent) => {
+      if (!resizeRef.current) return;
+
+      const diff = moveEvent.clientX - resizeRef.current.startX;
+      const newWidth = Math.max(MIN_COLUMN_WIDTH, resizeRef.current.startWidth + diff);
+
+      setColumnWidths((prev) => ({
+        ...prev,
+        [resizeRef.current!.column]: newWidth,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      resizeRef.current = null;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, [columnWidths]);
+
+  // Get column width
+  const getColumnWidth = useCallback((columnKey: string): number => {
+    return columnWidths[columnKey] ?? DEFAULT_COLUMN_WIDTH;
+  }, [columnWidths]);
+
   // Empty state
   if (!isLoading && results.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-gray-500 dark:text-gray-300">
         <svg
-          className="mx-auto h-12 w-12 text-gray-400 mb-4"
+          className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-400 mb-4"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -187,7 +294,7 @@ function ResultsTableComponent({
             d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
           />
         </svg>
-        <p className="text-lg font-medium">No results</p>
+        <p className="text-lg font-medium dark:text-gray-300">No results</p>
         <p className="text-sm mt-1">Enter tickers above and click Scan to see results.</p>
       </div>
     );
@@ -195,19 +302,33 @@ function ResultsTableComponent({
 
   return (
     <div className="overflow-x-auto -mx-6 px-6">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
             {columns.map((col) => {
               const isSorted = sortState.column === col.key;
               const canSort = col.sortable !== false;
+              const isDragging = draggedColumn === col.key;
+              const isDropTarget = dropTarget === col.key;
+              const width = getColumnWidth(col.key);
 
               return (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider ${
+                  draggable={!!onColumnsChange}
+                  onDragStart={(e) => handleDragStart(e, col.key)}
+                  onDragOver={(e) => handleDragOver(e, col.key)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, col.key)}
+                  onDragEnd={handleDragEnd}
+                  style={{ width: `${width}px`, minWidth: `${MIN_COLUMN_WIDTH}px` }}
+                  className={`relative px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider ${
                     col.align === "right" ? "text-right" : "text-left"
-                  } ${canSort ? "cursor-pointer hover:bg-gray-100 select-none" : ""}`}
+                  } ${canSort ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none" : ""} ${
+                    isDragging ? "opacity-50 bg-blue-100 dark:bg-blue-900" : ""
+                  } ${isDropTarget ? "bg-blue-50 dark:bg-blue-900/50 border-l-2 border-blue-400" : ""} ${
+                    onColumnsChange ? "cursor-grab active:cursor-grabbing" : ""
+                  }`}
                   onClick={canSort ? () => handleSort(col.key) : undefined}
                   aria-sort={isSorted ? (sortState.direction === "asc" ? "ascending" : "descending") : undefined}
                 >
@@ -220,29 +341,41 @@ function ResultsTableComponent({
                       <SortIndicator direction={sortState.direction} />
                     ) : null}
                     {canSort && !isSorted ? (
-                      <span className="text-gray-300 ml-1">⇅</span>
+                      <span className="text-gray-300 dark:text-gray-400 ml-1">⇅</span>
                     ) : null}
                   </span>
+                  {/* Resize handle */}
+                  <div
+                    draggable={false}
+                    className="absolute right-0 top-0 h-full w-3 cursor-col-resize hover:bg-blue-200 dark:hover:bg-blue-800 group z-10"
+                    onMouseDown={(e) => handleResizeStart(e, col.key)}
+                    onClick={(e) => e.stopPropagation()}
+                    onDragStart={(e) => e.preventDefault()}
+                  >
+                    <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-gray-300 dark:bg-gray-500 group-hover:bg-blue-500" />
+                  </div>
                 </th>
               );
             })}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-100">
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
           {sortedResults.map((result, index) => (
             <tr
               key={result.name ?? index}
-              className="hover:bg-gray-50 transition-colors"
+              className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {columns.map((col) => {
                 const value = result[col.key];
                 const colorClass = col.colorFn ? col.colorFn(value) : "";
+                const width = getColumnWidth(col.key);
                 return (
                   <td
                     key={col.key}
-                    className={`px-4 py-3 whitespace-nowrap text-sm ${
+                    style={{ width: `${width}px`, minWidth: `${MIN_COLUMN_WIDTH}px` }}
+                    className={`px-4 py-3 whitespace-nowrap text-sm overflow-hidden text-ellipsis ${
                       col.align === "right" ? "text-right" : "text-left"
-                    } ${col.key === "name" ? "font-medium text-gray-900" : "text-gray-700"} ${colorClass}`}
+                    } ${col.key === "name" ? "font-medium text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"} ${colorClass}`}
                   >
                     {col.format(value)}
                   </td>
@@ -318,8 +451,8 @@ function formatMarketCap(value: unknown): string {
 }
 
 function getChangeColor(value: unknown): string {
-  if (value == null || typeof value !== "number") return "text-gray-500";
-  if (value > 0) return "text-green-600 font-medium";
-  if (value < 0) return "text-red-600 font-medium";
-  return "text-gray-500";
+  if (value == null || typeof value !== "number") return "text-gray-500 dark:text-gray-300";
+  if (value > 0) return "text-green-600 dark:text-green-400 font-medium";
+  if (value < 0) return "text-red-600 dark:text-red-400 font-medium";
+  return "text-gray-500 dark:text-gray-300";
 }
